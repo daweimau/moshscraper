@@ -6,7 +6,7 @@ There is no feature on the website to "download all lectures". Users are forced 
 
 This is a silly script to download all the lectures.
 
-This should work on any mosh course, and will probably also work on other course-provider pages if they use the same page template/provider as mosh does. Although, it
+This should work on any mosh course, and will probably also work on other course-provider pages if they use the same page template/provider as mosh does. Although, it won't work if the video host starts enforcing authentication measures. It works for now.
 
 # How to use
 
