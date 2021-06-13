@@ -25,13 +25,12 @@ function main() {
 
         // Get lecture download links from each page
         const completeSection = sectionPages.map((page) => {
-            page.downloadLink = getDownloadLink(page.pageLink);
+            const { fileName, url } = getDownloadInfo(page.pageLink);
+            page = { ...page, fileName, url };
             return page;
         });
         return { sectionTitle: sTitle, content: completeSection };
     });
-
-    console.log(JSON.stringify(sections));
 }
 
 /**
@@ -53,7 +52,7 @@ function getPages(section, baseUrl) {
  * For a given lecture page link: GETs the page, parses it,
  * and scrapes the lecture download link
  */
-function getDownloadLink(pageLink) {
+function getDownloadInfo(pageLink) {
     // This works but it's synchronous. Oh well.
     const req = new XMLHttpRequest();
     req.open("GET", pageLink, false);
@@ -61,15 +60,18 @@ function getDownloadLink(pageLink) {
     const res = req.response;
     const domparser = new DOMParser();
     const doc = domparser.parseFromString(res, "text/html");
-    var downLink = "";
+    var url = "";
+    var fileName = "";
     try {
-        downLink = doc.getElementsByClassName("download")[0].href;
+        const downButton = doc.getElementsByClassName("download")[0];
+        url = downButton.href;
+        fileName = downButton.getAttribute("data-x-origin-download-name");
         console.log("Scraped a lecture download link...");
     } catch (err) {
         console.log("Skipping a page where no lecture download link found...");
     }
 
-    return downLink;
+    return { url, fileName };
 }
 
 main();

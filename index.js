@@ -25,15 +25,15 @@ async function main() {
 
 async function downloadSectionLectures(section, sPath) {
     const downloadableLectures = section.content.filter((item) =>
-        Boolean(item.downloadLink)
+        Boolean(item.url)
     );
     await Promise.all(
         downloadableLectures.map(
             (lec) =>
                 new Promise((resolve) => {
-                    const dest = `${sPath}/${lec.title}.mp4`;
+                    const dest = `${sPath}/${lec.fileName}`;
                     if (!fs.existsSync(dest))
-                        download(lec.downloadLink, dest).then(resolve);
+                        download(lec.url, dest).then(resolve);
                     else {
                         console.log(`${dest} already exists. Skipping...`);
                         resolve();
