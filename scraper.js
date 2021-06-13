@@ -31,6 +31,8 @@ function main() {
         });
         return { sectionTitle: sTitle, content: completeSection };
     });
+
+    console.log(JSON.stringify(sections));
 }
 
 /**
