@@ -31,7 +31,7 @@ function main() {
         return { sectionTitle: sTitle, content: completeSection };
     });
 
-    return JSON.stringify(sections);
+    console.log(JSON.stringify(sections));
 }
 
 /**
