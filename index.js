@@ -5,41 +5,49 @@
 var http = require("https");
 var fs = require("fs");
 
-function main() {
+async function main() {
     const rawdata = fs.readFileSync("scraped_links.json");
     const sections = JSON.parse(rawdata);
 
-    sections.forEach(async (section) => {
+    for (var i = 0; i < sections.length; i++) {
+        const section = sections[i];
         const sPath = `course_content/${section.sectionTitle}`;
         fs.mkdirSync(sPath, { recursive: true });
-
-        // The promise implementation was an attempt to restrict downloading
-        // just one section at a time. Currently it's still downloading everything at once.
-        await Promise.all(
-            section.content.map((lec) => {
-                return new Promise(async (resolve) => {
-                    if (lec.downloadLink) {
-                        const dest = `${sPath}/${lec.title}.mp4`;
-                        if (!fs.existsSync(dest)) {
-                            await download(lec.downloadLink, dest);
-                            resolve();
-                        } else {
-                            console.log(`${dest} already exists. Skipping...`);
-                            resolve();
-                        }
-                    }
-                });
-            })
+        await downloadSectionLectures(section, sPath);
+        console.log(
+            `Completed section ${i} of ${
+                sections.length - 1
+            }, moving to next...\n`
         );
-    });
+    }
+    console.log("All downloads complete.\n");
+}
+
+async function downloadSectionLectures(section, sPath) {
+    const downloadableLectures = section.content.filter((item) =>
+        Boolean(item.downloadLink)
+    );
+    await Promise.all(
+        downloadableLectures.map(
+            (lec) =>
+                new Promise((resolve) => {
+                    const dest = `${sPath}/${lec.title}.mp4`;
+                    if (!fs.existsSync(dest))
+                        download(lec.downloadLink, dest).then(resolve);
+                    else {
+                        console.log(`${dest} already exists. Skipping...`);
+                        resolve();
+                    }
+                })
+        )
+    );
 }
 
 function clearIfExists(path) {
     if (fs.existsSync(path)) fs.unlinkSync(path);
 }
 
-// Async
-function download(url, dest, callback) {
+function download(url, dest) {
     const placeholderPath = `${dest}-incomplete`;
 
     return new Promise((resolve) => {
@@ -52,7 +60,7 @@ function download(url, dest, callback) {
             http.get(url, function (response) {
                 response.pipe(file);
                 file.on("finish", function () {
-                    file.close(callback);
+                    file.close();
                     // The download has complete: remove the placeholder flag
                     fs.renameSync(placeholderPath, dest);
                     console.log(`Completed download for: ${dest}`);
@@ -60,7 +68,7 @@ function download(url, dest, callback) {
                 });
             });
         } catch (err) {
-            file.close(callback);
+            file.close();
             console.log(`This download failed: ${dest}`);
             console.log(err);
             resolve();
