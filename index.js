@@ -9,6 +9,7 @@ async function main() {
     const rawdata = fs.readFileSync("scraped_links.json");
     const sections = JSON.parse(rawdata);
 
+    console.log("Commencing downloads...")
     for (var i = 0; i < sections.length; i++) {
         const section = sections[i];
         const sPath = `course_content/${section.sectionTitle}`;

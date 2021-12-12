@@ -1,20 +1,29 @@
 # What is this?
 
-The courses featured on https://codewithmosh.com/ include download links for each lecture.
+https://teachable.com/ is a service which hosts paid courses, lectures, and similar.
 
-There is no feature on the website to "download all lectures". Users are forced to go to each individual lecture page, click "Download", and work through each.
+Sellers can create store fronts, upload their course content, and sell subscriptions to viewers.
 
-This is a silly script to download all the lectures.
+At least some teachable shopfronts allow viewers to download the course content.
 
-This should work on any mosh course, and will probably also work on other course-provider pages if they use the same page template/provider as mosh does. Although, it won't work if the video host starts enforcing authentication measures. It works for now.
+However, if a viewer wants to download many videos in a course, this is a very tedious process.
+
+This repo contains:
+
+1. A scraper (to run in a browser) which collects all the video download links in a course (relatively quickly), and
+2. A separate script (to run on a local machine) that utilises this info to download all the videos into an organised folder structure (matching the course structure)
+
+This was originally written for a specific teachable store front: https://codewithmosh.com/
+
+No promises this works for you! This is really just for me.
 
 # How to use
 
 You need node installed.
 
 1. Log in to codewithmosh, and navigate to your desired course
-2. Navigate to any individual lecture page in the course (eg https://codewithmosh.com/courses/357787/lectures/5634517). This should be the page containing a video.
-3. Open Chrome developer tools and go to the console. Don't extend the console too wide: the page sidebar needs to still be in view (but it collapses if you open the console too wide)
+2. Navigate to any individual watch-video page in the course (eg https://codewithmosh.com/courses/357787/lectures/5634517)
+3. Open Chrome developer tools and go to the console. Don't extend the console too wide: the page sidebar needs to still be in view. (Opening the console too wide will collapse the sidebar; we don't want that.)
 4. In the console, paste the entire contents of the `scraper.js` file in this project. Enter. This will take a few minutes depending on the course, but it will give you updates as it progresses.
 5. Once the script has run, you will have a giant JSON object in your console. Copy this object, and paste it into `scraped_links.json`. Save.
-6. Run `node index` in this directory. This will download the actual lecture files. It will take serious time depending on the particular course and your internet. You will get updates as it progresses, but try to avoid starting it unless you can give it time to finish. Incomplete downloads will be marked as such: if you re-run the script later, it will purge any incomplete files, and won't try to overwrite any already-complete files.
+6. On your local terminal, run `node index` in this directory. This will download the actual lecture files. It will take serious time depending on the particular course and your internet. You will get updates as it progresses, but try to avoid starting it unless you can give it time to finish. If the script / download process is interrupted, that's ok: re-running the script will purge any incomplete files and resume progress from there.

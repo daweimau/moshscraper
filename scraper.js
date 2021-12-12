@@ -2,51 +2,83 @@
 // The result will be a JSON object printed on the console.
 // Copy this output, and save it as `scraped_links.json` in this directory.
 
+
+const baseUrl = "https://codewithmosh.com";
+
+
 function main() {
-    const baseUrl = "https://codewithmosh.com";
+    const sectionElements = getRawSectionElements()
+    const sections = refineSectionObjects(sectionElements)
+    // Final output 
+    console.log(JSON.stringify(sections));
+}
 
-    /**
-     * The various section HTML elements
-     */
-    const sectionElements = Array.from(
-        document.getElementsByClassName("course-section")
-    );
 
-    const sections = sectionElements.map((s, i) => {
-        // Get section numbered title
-        const sTitle = `${i} ${
-            s.querySelector('[class="section-title"]').innerText
-        }`;
+/**
+ * Refines a collection of HTML section elements into useful js objects
+ */
+const refineSectionObjects = (sectionElements) => sectionElements.map(processOneSection);
 
-        console.log(`Processing ${sTitle}...`);
+/**
+ * The various section HTML elements
+ */
+const getRawSectionElements = () => 
+    Array.from(document.getElementsByClassName("course-section"));
 
-        // Get the lecture pages in this section
-        const sectionPages = getPages(s, baseUrl);
+/**
+ * Takes an HTML section element, and returns a useful js object
+ */
+const processOneSection = (section, sectionIndex) => {
+    // Get section numbered title
+    const sTitle = getSectionTitle(section, sectionIndex)
 
-        // Get lecture download links from each page
-        const completeSection = sectionPages.map((page) => {
-            const { fileName, url } = getDownloadInfo(page.pageLink);
-            page = { ...page, fileName, url };
-            return page;
-        });
-        return { sectionTitle: sTitle, content: completeSection };
+    // Log progress
+    console.log(`Processing ${sTitle}...`);
+
+    // Get the lecture pages in this section
+    let sectionPages = getSectionPages(section, baseUrl);
+
+    // Get lecture download links from each page
+    sectionPages = sectionPages.map((page) => {
+        const { fileName, url } = getDownloadInfo(page.pageLink);
+        page = { ...page, fileName, url };
+        return page;
     });
 
-    console.log(JSON.stringify(sections));
+    // Discard pages with no download links
+    sectionPages = sectionPages.filter(page => page.url !== "")
+
+    return { sectionTitle: sTitle, content: sectionPages };
+};
+
+/**
+ * For a given section element: find the section title elsewhere in the DOM
+ */
+const getSectionTitle = (section, sectionIndex) => 
+    `${sectionIndex} ${section.querySelector('[class="section-title"]').innerText}`;
+
+/**
+ * Get the raw HTML 'page' elements for this section
+ */
+const getSectionPageElements = (section) =>
+    Array.from(section.getElementsByClassName("section-list")[0].children);
+
+
+/**
+ * For a given HTML 'page' element: returns a useful js object
+ */
+const refineOnePageElement = (pageElement) => {
+    const pageLink = baseUrl + pageElement.getAttribute("data-lecture-url");
+    const title = pageElement.querySelector(".item .title-container").innerText;
+    return { pageLink, title };
 }
 
 /**
  * For a given section element: scrapes interior page titles and urls
  */
-function getPages(section, baseUrl) {
-    const pageElements = Array.from(
-        section.getElementsByClassName("section-list")[0].children
-    );
-    const sectionPages = pageElements.map((el) => {
-        const pageLink = baseUrl + el.getAttribute("data-lecture-url");
-        const title = el.querySelector(".item .title-container").innerText;
-        return { pageLink, title };
-    });
+function getSectionPages(section, baseUrl) {
+    const pageElements = getSectionPageElements(section)
+    const sectionPages = pageElements.map(refineOnePageElement);
     return sectionPages;
 }
 
