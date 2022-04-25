@@ -30,7 +30,9 @@ const getRawSectionElements = () =>
  */
 const processOneSection = (section, sectionIndex) => {
     // Get section numbered title
-    const sTitle = getSectionTitle(section, sectionIndex)
+    const sTitle = removeTextNoise(
+        getSectionTitle(section, sectionIndex)
+    )
 
     // Log progress
     console.log(`Processing ${sTitle}...`);
@@ -41,7 +43,11 @@ const processOneSection = (section, sectionIndex) => {
     // Get lecture download links from each page
     sectionPages = sectionPages.map((page) => {
         const { fileName, url } = getDownloadInfo(page.pageLink);
-        page = { ...page, fileName, url };
+        page = {
+            ...page, 
+            filename: removeTextNoise(fileName), 
+            url
+        };
         return page;
     });
 
@@ -50,6 +56,20 @@ const processOneSection = (section, sectionIndex) => {
 
     return { sectionTitle: sTitle, content: sectionPages };
 };
+
+
+
+/**
+ * Remove HTML noise like `\n` from the given string
+ */
+const removeTextNoise = (titleString) => (
+    titleString
+        .replaceAll("  ", "")
+        .replaceAll("\n", "")
+        .replaceAll(" ", "")
+        .trim()
+)
+
 
 /**
  * For a given section element: find the section title elsewhere in the DOM
@@ -69,7 +89,7 @@ const getSectionPageElements = (section) =>
  */
 const refineOnePageElement = (pageElement) => {
     const pageLink = baseUrl + pageElement.getAttribute("data-lecture-url");
-    const title = pageElement.querySelector(".item .title-container").innerText;
+    const title = removeTextNoise(pageElement.querySelector(".item .title-container").innerText);
     return { pageLink, title };
 }
 
