@@ -45,7 +45,7 @@ const processOneSection = (section, sectionIndex) => {
         const { fileName, url } = getDownloadInfo(page.pageLink);
         page = {
             ...page, 
-            filename: removeTextNoise(fileName), 
+            fileName: removeTextNoise(fileName), 
             url
         };
         return page;
