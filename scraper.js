@@ -1,131 +1,146 @@
-// Inject this into any open mosh 'course' page (with the sidebar open)
-// The result will be a JSON object printed on the console.
-// Copy this output, and save it as `scraped_links.json` in this directory.
+"use strict";
 
-
-const baseUrl = "https://codewithmosh.com";
-
-
-function main() {
-    const sectionElements = getRawSectionElements()
-    const sections = refineSectionObjects(sectionElements)
-    // Final output 
-    console.log(JSON.stringify(sections));
-}
-
-
-/**
- * Refines a collection of HTML section elements into useful js objects
- */
-const refineSectionObjects = (sectionElements) => sectionElements.map(processOneSection);
-
-/**
- * The various section HTML elements
- */
-const getRawSectionElements = () => 
-    Array.from(document.getElementsByClassName("course-section"));
-
-/**
- * Takes an HTML section element, and returns a useful js object
- */
-const processOneSection = (section, sectionIndex) => {
-    // Get section numbered title
-    const sTitle = removeTextNoise(
-        getSectionTitle(section, sectionIndex)
-    )
-
-    // Log progress
-    console.log(`Processing ${sTitle}...`);
-
-    // Get the lecture pages in this section
-    let sectionPages = getSectionPages(section, baseUrl);
-
-    // Get lecture download links from each page
-    sectionPages = sectionPages.map((page) => {
-        const { fileName, url } = getDownloadInfo(page.pageLink);
-        page = {
-            ...page, 
-            fileName: removeTextNoise(fileName), 
-            url
-        };
-        return page;
-    });
-
-    // Discard pages with no download links
-    sectionPages = sectionPages.filter(page => page.url !== "")
-
-    return { sectionTitle: sTitle, content: sectionPages };
-};
-
-
-
-/**
- * Remove HTML noise like `\n` from the given string
- */
-const removeTextNoise = (titleString) => (
-    titleString
-        .replaceAll("  ", "")
-        .replaceAll("\n", "")
-        .replaceAll(" ", "")
-        .trim()
-)
-
-
-/**
- * For a given section element: find the section title elsewhere in the DOM
- */
-const getSectionTitle = (section, sectionIndex) => 
-    `${sectionIndex} ${section.querySelector('[class="section-title"]').innerText}`;
-
-/**
- * Get the raw HTML 'page' elements for this section
- */
-const getSectionPageElements = (section) =>
-    Array.from(section.getElementsByClassName("section-list")[0].children);
-
-
-/**
- * For a given HTML 'page' element: returns a useful js object
- */
-const refineOnePageElement = (pageElement) => {
-    const pageLink = baseUrl + pageElement.getAttribute("data-lecture-url");
-    const title = removeTextNoise(pageElement.querySelector(".item .title-container").innerText);
-    return { pageLink, title };
-}
-
-/**
- * For a given section element: scrapes interior page titles and urls
- */
-function getSectionPages(section, baseUrl) {
-    const pageElements = getSectionPageElements(section)
-    const sectionPages = pageElements.map(refineOnePageElement);
-    return sectionPages;
-}
-
-/**
- * For a given lecture page link: GETs the page, parses it,
- * and scrapes the lecture download link
- */
-function getDownloadInfo(pageLink) {
-    // This works but it's synchronous. Oh well.
-    const req = new XMLHttpRequest();
-    req.open("GET", pageLink, false);
-    req.send();
-    const res = req.response;
-    const domparser = new DOMParser();
-    const doc = domparser.parseFromString(res, "text/html");
-    var url = "";
-    var fileName = "";
-    try {
-        const downButton = doc.getElementsByClassName("download")[0];
-        url = downButton.href;
-        fileName = downButton.getAttribute("data-x-origin-download-name");
-        console.log("Scraped a lecture download link...");
-    } catch (err) {
-        console.log("Skipping a page where no lecture download link found...");
+class HtmlHelper {
+    constructor(){
+        this._domparser = new DOMParser();
     }
 
-    return { url, fileName };
+    parse = (text) => {
+        return this._domparser.parseFromString(text, "text/html");
+    };
+
+    /**
+     * Fetch and pre-parse an HTML document at the given URL
+     */
+    getDocument = async (documentUrl) => {
+        const res = await fetch(documentUrl);
+        const text = await res.text();
+        return this.parse(text);
+    };
+
+    /**
+     * Remove HTML noise like `\n` from the given string
+     */
+    cleanText = (str) => (
+        str
+            .replaceAll("  ", "")
+            .replaceAll("\n", "")
+            .replaceAll(" ", "")
+            .trim()
+    );
+};
+
+class Scraper {
+    constructor(){
+        this._htmlHelper = new HtmlHelper();
+        this._activeUrl = this._getActiveUrl();
+        this._baseUrl = this._getBaseUrl();
+    };
+
+    _getBaseUrl = () => {
+        return document.location.origin;
+    };
+
+    _getActiveUrl = () => {
+        return document.location.href;
+    };
+
+    _getActiveDocument = async () => {
+        return this._htmlHelper.getDocument(this._activeUrl);
+    };
+
+    // -- Sections --
+
+    _getAllSectionElements = (doc) => {
+        return Array.from(doc.getElementsByClassName("course-section"));
+    };
+
+    _generateSectionTitle = (sectionElement, sectionIndex) => {
+        return this._htmlHelper.cleanText(
+            `${sectionIndex} ${sectionElement.querySelector('[class="section-title"]').innerText}`
+        );
+    };
+
+    _getSectionPageElements = (sectionElement) => {
+        return Array.from(sectionElement.getElementsByClassName("section-list")[0].children);
+    };
+
+    // -- Pages --
+
+    _getPageTitle = (pageElement) => {
+        return this._htmlHelper.cleanText(pageElement.querySelector(".item .title-container").innerText);
+    };
+
+    _getPageUrl = (pageElement) => {
+        return this._baseUrl + pageElement.getAttribute("data-lecture-url");
+    };
+
+    _getPageInfo = (pageElement) => {
+        const pageTitle = this._getPageTitle(pageElement);
+        const pageUrl = this._getPageUrl(pageElement);
+        return {
+            pageTitle,
+            pageUrl
+        };
+    };
+
+    _getPageDownloadInfo = async (pageInfo) => {
+        const doc = await this._htmlHelper.getDocument(pageInfo.pageUrl);
+        const downloadButton = doc.getElementsByClassName("download")[0];
+
+        if(!downloadButton) return {
+            downloadUrl: ""
+        };
+
+        const downloadUrl = downloadButton.href;
+        const downloadFileName = downloadButton.getAttribute("data-x-origin-download-name");
+        return {
+            downloadUrl,
+            downloadFileName
+        };
+    };
+
+    // Orchestration
+
+    _getSectionPageInfos = (sectionElement) => {
+        const sectionPageElements = this._getSectionPageElements(sectionElement);
+        return sectionPageElements.map(this._getPageInfo);
+    };
+
+    _getCourseSectionPageInfos = (sectionElements) => {
+        return sectionElements.map((s, idx) => {
+            const sectionTitle = this._generateSectionTitle(s, idx);
+            const sectionPageInfos = this._getSectionPageInfos(s);
+            return {
+                sectionTitle,
+                sectionPageInfos
+            };
+        });
+    };
+
+    _getSectionPagesDownloadInfos = async (sectionPageInfos) => {
+        const downloadInfos = await Promise.all(sectionPageInfos.map(this._getPageDownloadInfo));
+        const filteredInfos = downloadInfos.filter((info) => info.downloadUrl != "");
+        return filteredInfos;
+    };
+
+    _getCoursePageDownloadInfos = async (courseInfo) => {
+        return Promise.all(courseInfo.map(async ({ sectionTitle, sectionPageInfos }) => {
+            const pageDownloadInfos = await this._getSectionPagesDownloadInfos(sectionPageInfos);
+            return {
+                sectionTitle,
+                content: pageDownloadInfos
+            };
+        }));
+    };
+
+    scrapeCourseDownloads = async () => {
+        const activeDoc = await this._getActiveDocument();
+        const sections = this._getAllSectionElements(activeDoc);
+        const courseInfo = this._getCourseSectionPageInfos(sections);
+        const courseDownloads = await this._getCoursePageDownloadInfos(courseInfo);
+        console.log(JSON.stringify(courseDownloads));
+    };
 }
 
-main();
+new Scraper().scrapeCourseDownloads();

@@ -26,15 +26,15 @@ async function main() {
 
 async function downloadSectionLectures(section, sPath) {
     const downloadableLectures = section.content.filter((item) =>
-        Boolean(item.url)
+        Boolean(item.downloadUrl)
     );
     await Promise.all(
         downloadableLectures.map(
             (lec) =>
                 new Promise((resolve) => {
-                    const dest = `${sPath}/${lec.fileName}`;
+                    const dest = `${sPath}/${lec.downloadFileName}`;
                     if (!fs.existsSync(dest))
-                        download(lec.url, dest).then(resolve);
+                        download(lec.downloadUrl, dest).then(resolve);
                     else {
                         console.log(`${dest} already exists. Skipping...`);
                         resolve();
@@ -48,7 +48,7 @@ function clearIfExists(path) {
     if (fs.existsSync(path)) fs.unlinkSync(path);
 }
 
-function download(url, dest) {
+function download(downloadUrl, dest) {
     const placeholderPath = `${dest}-incomplete`;
 
     return new Promise((resolve) => {
@@ -58,7 +58,7 @@ function download(url, dest) {
         // Create a new placeholder file
         var file = fs.createWriteStream(placeholderPath);
         try {
-            http.get(url, function (response) {
+            http.get(downloadUrl, function (response) {
                 response.pipe(file);
                 file.on("finish", function () {
                     file.close();
